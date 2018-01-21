@@ -1,0 +1,26 @@
+{
+  "name": "persona",
+  "version": "0.1.0",
+  "main": "index.js",
+  "author": "Byron McMullen <byronsm@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "nearley": "^2.11.0",
+    "ramda": "^0.25.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-jest": "^22.1.0",
+    "babel-plugin-transform-builtin-extend": "^1.1.2",
+    "babel-preset-env": "^1.6.1",
+    "jest": "^22.1.2"
+  },
+  "jest": {
+    "modulePaths": [
+      "<rootDir>/src"
+    ]
+  }
+}
