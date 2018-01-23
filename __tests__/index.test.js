@@ -13,7 +13,19 @@ const testDefinition = {
     hometown: { options: OptionLiterals.STRING },
     class: {
       options: {
-        fighter: {},
+        fighter: {
+          ability: { options: { str: {}, con: {} } },
+          weapon: {
+            handed: {
+              options: {
+                one_handed: {
+                  options: { small: {}, medium: {} },
+                },
+                two_handed: {},
+              }
+            }
+          }
+        },
         barbarian: {},
       }
     }
@@ -47,6 +59,16 @@ describe('creating a builder', () => {
       expect(() => testCharBuilder({ class: 'accountant' })).toThrowError(InvalidChoice);
     });
     it('imposes modifications defined by the option choice');
+  });
+  describe('.fields()', () => {
+    it('can list all fields, even once chosen', () => {
+      const character = testCharBuilder().choose('name', 'Ragnar');
+      expect(character.fields()).toEqual(expect.arrayContaining(['name', 'level']));
+    });
+    it('can list all fields, even ones added by a choice', () => {
+      const character = testCharBuilder().choose('class', 'fighter');
+      expect(character.fields()).toEqual(expect.arrayContaining(['name', 'class.ability']));
+    });
   });
   it('can list required fields', () => {
     const required = testCharBuilder().requires();
@@ -83,12 +105,30 @@ describe('creating a builder', () => {
       const nextCharacter = testCharBuilder().choose('name', 'Ragnar');
       expect(nextCharacter.get('name')).toEqual('Ragnar');
     });
-    it('updates list of possible fields', () => {
+    it('removes choice from list of possible fields', () => {
       const missing = testCharBuilder().choose('name', 'Ragnar').missing();
       const expected = expect.arrayContaining(['level', 'hometown']);
       const unexpected = expect.arrayContaining(['name']);
       expect(missing).toEqual(expected);
       expect(missing).not.toEqual(unexpected);
+    });
+    it('can be chained', () => {
+      const character = testCharBuilder().choose('name', 'ragnar').choose('level', 3);
+      expect(character.get('name')).toEqual('ragnar');
+      expect(character.get('level')).toEqual(3);
+    });
+    it('can nest', () => {
+      const character = testCharBuilder().choose('class', 'fighter').choose('class.weapon', 'one_handed');
+      expect(character.get('class')).toEqual('fighter');
+      expect(character.get('class.weapon')).toEqual('one_handed');
+    });
+    it('can add new choices', () => {
+      const character = testCharBuilder().choose('class', 'fighter');
+      expect(character.missing()).toEqual(expect.arrayContaining(['class.ability']));
+    });
+    xit('can add new choices that nest', () => {
+      const character = testCharBuilder().choose('class', 'fighter').choose('class.weapon', 'one_handed');
+      expect(character.missing()).toEqual(expect.arrayContaining(['class.weapon.handed']));
     });
   });
 });
