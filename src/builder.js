@@ -1,4 +1,4 @@
-import { append, filter, propEq, keys, pick, dropLast, contains, not, equals, always, compose, join, merge, values, difference, forEach, concat, map, flatten, path, split, __ } from 'ramda';
+import { append, filter, propEq, keys, pick, dropLast, contains, not, equals, always, compose, join, merge, values, difference, forEach, concat, map, flatten, path, split, last, intersperse, __ } from 'ramda';
 
 export class InvalidField extends Error {
   constructor(field, ...params) {
@@ -46,8 +46,8 @@ export default function(definition) {
         const nonLiteralChoices = nonLiteralDefChoices;
         if (not(contains(field, this.fields()))) throw new InvalidField(field);
         const choices = split('.', field);
-        const choicePath = append(dropLast(choices), flatten(map(v => [v, 'options'], dropLast(choices))));
-        const validOptions = path(append(choicePath, 'options'), this.fields());
+        const choicePath =  intersperse('options', choices); // append(last(choices), flatten(map(v => [v, 'options'], dropLast(choices))));
+        const validOptions = path(append('options', choicePath), definition.fields);
         switch (typeof validOptions) {
           case 'symbol': {
             const notMatchType = compose(not, equals(__, (typeof values[field])));
@@ -72,7 +72,7 @@ export default function(definition) {
             break;
         }
         // if we don't have a validation rule, then it is always valid
-        const validationRule = path(append(choicePath, 'validation'), this.fields()) || always(true);
+        const validationRule = path(append('validation', choicePath), definition.fields) || always(true);
         if (not(validationRule(values[field]))) throw new InvalidChoice(field, values[field], )
         set.call(this, field, values[field]);
       });
