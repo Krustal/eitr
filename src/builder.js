@@ -29,6 +29,7 @@ import {
   init,
   pair,
   head,
+  ifElse,
   __
 } from "ramda";
 
@@ -76,12 +77,8 @@ export default function(definition) {
       Object.keys(values).forEach(field => {
         const nonLiteralChoices = nonLiteralDefChoices;
         if (not(contains(field, this.fields()))) throw new InvalidField(field);
-        const choices = split(".", field);
-        const choicePath = intersperse("options", choices); // append(last(choices), flatten(map(v => [v, 'options'], dropLast(choices))));
-        const validOptions = path(
-          append("options", choicePath),
-          definition.fields
-        );
+        const choiceConfig = this._choiceConfig(field);
+        const validOptions = choiceConfig.options;
         switch (typeof validOptions) {
           case "symbol": {
             const notMatchType = compose(not, equals(__, typeof values[field]));
@@ -118,9 +115,7 @@ export default function(definition) {
             break;
         }
         // if we don't have a validation rule, then it is always valid
-        const validationRule =
-          path(append("validation", choicePath), definition.fields) ||
-          always(true);
+        const validationRule = choiceConfig.validation || always(true);
         if (not(validationRule(values[field])))
           throw new InvalidChoice(field, values[field]);
         set.call(this, field, values[field]);
@@ -186,13 +181,17 @@ export default function(definition) {
     _choiceConfig(field) {
       if (field === "") return definition.fields;
       const path = split(".", field);
-      console.log("path", path);
       return head(
         reduce(
           ([relOptions, breadcrumb], relPath) => {
             const choicePath = append(relPath, breadcrumb);
             const choice = this.choices[join(".", choicePath)];
-            return pair(relOptions[relPath].options[choice], choicePath);
+            const options = ifElse(
+              compose(equals("Undefined"), type),
+              always(relOptions[relPath]),
+              always(relOptions[relPath].options[choice])
+            )(choice);
+            return pair(options, choicePath);
           },
           pair(definition.fields, []),
           path
