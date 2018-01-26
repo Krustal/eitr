@@ -16,13 +16,13 @@ const testDefinition = {
         fighter: {
           ability: { options: { str: {}, con: {} } },
           weapon: {
-            handed: {
-              options: {
-                one_handed: {
+            options: {
+              one_handed: {
+                size: {
                   options: { small: {}, medium: {} }
-                },
-                two_handed: {}
-              }
+                }
+              },
+              two_handed: {}
             }
           }
         },
@@ -90,11 +90,18 @@ describe("creating a builder", () => {
         expect.arrayContaining(["name", "level"])
       );
     });
-    it("can list all fields, even ones added by a choice", () => {
-      const character = testCharBuilder().choose("class", "fighter");
-      expect(character.fields()).toEqual(
-        expect.arrayContaining(["name", "class.ability"])
-      );
+    xit("can list all fields, even ones added by a choice", () => {
+      const character = testCharBuilder()
+        .choose("class", "fighter")
+        .choose("class.weapon", "one_handed");
+      const expecting = expect.arrayContaining([
+        "name",
+        "class.ability",
+        "class.weapon",
+        "class.weapon.handed"
+      ]);
+      console.log(character.options("class.weapon"));
+      expect(character.fields()).toEqual(expecting);
     });
   });
   it("can list required fields", () => {
@@ -119,6 +126,13 @@ describe("creating a builder", () => {
     it("returns the options for custom fields", () => {
       const options = testCharBuilder().options("class");
       const expected = expect.arrayContaining(["fighter", "barbarian"]);
+      expect(options).toEqual(expected);
+    });
+
+    it("returns the options for nested options", () => {
+      const character = testCharBuilder().choose("class", "fighter");
+      const expected = expect.arrayContaining(["one_handed", "two_handed"]);
+      expect(character.options("class.weapon")).toEqual(expected);
     });
   });
 

@@ -22,6 +22,13 @@ import {
   split,
   last,
   intersperse,
+  reduce,
+  cond,
+  type,
+  identity,
+  init,
+  pair,
+  head,
   __
 } from "ramda";
 
@@ -105,8 +112,6 @@ export default function(definition) {
                 values[field],
                 `must be one of [${join(", ", keys(validOptions))}]`
               );
-              // TODO: I think what I want to do is: when an enumerated option with modifications is chosen it creates a new GeneratedBuilder class using the higher
-              // order function. That GeneratedBuilder retains a back link to "this" instance and merges its own options with the ones downstream".
             }
           }
           default:
@@ -164,8 +169,53 @@ export default function(definition) {
       return concat(rootMissing, nestedMissing);
     }
 
+    /**
+     * @private
+     * Given a period seperated path, returns the config for the
+     * option. Each step in the path will follow that field and
+     * the choice made for it so you don't have to re-specify the
+     * choice.
+     * @example
+     * let Character = new Builder(config);
+     * let ragnar = new Character({ a: 'first' });
+     * ragnar.choiceConfig('a.b');
+     * // => { options: { second: { foo: 'baz' } } };
+     * @param {string} field - period seperated path to field
+     * @returns {object} - object configuring field following field path
+     */
+    _choiceConfig(field) {
+      if (field === "") return definition.fields;
+      const path = split(".", field);
+      console.log("path", path);
+      return head(
+        reduce(
+          ([relOptions, breadcrumb], relPath) => {
+            const choicePath = append(relPath, breadcrumb);
+            const choice = this.choices[join(".", choicePath)];
+            return pair(relOptions[relPath].options[choice], choicePath);
+          },
+          pair(definition.fields, []),
+          path
+        )
+      );
+    }
+
+    /**
+     * Given a period seperated list of options, resolves the path to provide
+     * a list of valid choices that can passed to `.choose()` or a symbol for
+     * literal types (e.g. string, number).
+     * @param {string} field - period seperated path to field
+     * @return {string[]|symbol} - list of valid option choices
+     */
     options(field) {
-      return definition.fields[field].options;
+      const choices = split(".", field);
+      const pathTo = join(".", init(choices));
+      const choice = last(choices);
+      const options = path([choice, "options"], this._choiceConfig(pathTo));
+      return cond([
+        [compose(equals("Symbol"), type), identity],
+        [compose(equals("Object"), type), keys]
+      ])(options);
     }
 
     choose(field, value) {
