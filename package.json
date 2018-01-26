@@ -16,7 +16,8 @@
     "babel-jest": "^22.1.0",
     "babel-plugin-transform-builtin-extend": "^1.1.2",
     "babel-preset-env": "^1.6.1",
-    "jest": "^22.1.2"
+    "jest": "^22.1.2",
+    "jest-junit": "^3.4.1"
   },
   "jest": {
     "modulePaths": [
