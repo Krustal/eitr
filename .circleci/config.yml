@@ -29,8 +29,8 @@ jobs:
         
       # run tests!
       - run:
-          name: Jest Tests
-          command: yarn test --ci --testResultsProcessor="jest-junit"
+          name: "Jest Tests"
+          command: yarn test -- --ci --testResultsProcessor="jest-junit"
           environment:
             JEST_JUNIT_OUTPUT: "reports/junit/js-test-results.xml"
 
