@@ -34,6 +34,8 @@ import {
   reject,
   isNil,
   tail,
+  chain,
+  prop,
   __
 } from "ramda";
 
@@ -131,7 +133,9 @@ export default function(definition) {
     }
 
     fields() {
-      const ideaFn = (fields, breadcrumb = []) => {
+      const ideaFn = (config, breadcrumb = []) => {
+        console.log("ideaFn called with", config);
+        const fields = config.fields;
         const field = join(".", breadcrumb);
         const children = keys(fields);
         const response = [
@@ -149,13 +153,14 @@ export default function(definition) {
         return flatten(response);
       };
       // remove the empty string field that is generated for the root
-      return tail(ideaFn(definition.fields));
+      return tail(ideaFn(definition));
     }
 
     requires() {
       return keys(filter(propEq("required", true), definition.fields));
     }
 
+    // TODO: this should be cleaned up
     missing() {
       let result = [];
       const undefinedChoice = field => this.choices[field] === undefined;
@@ -165,7 +170,8 @@ export default function(definition) {
       const nextLevel = difference(nonLiteralDefChoices, rootMissing);
       const nestedMissing = flatten(
         map(f => {
-          const innerFields = definition.fields[f].options[this.choices[f]];
+          const innerFields =
+            definition.fields[f].options[this.choices[f]].fields;
           const nestedKey = i => `${f}.${i}`;
           const innerKeys = map(nestedKey, keys(innerFields));
           return filter(undefinedChoice, innerKeys);
@@ -189,27 +195,16 @@ export default function(definition) {
      * @returns {object} - object configuring field following field path
      */
     _choiceConfig(field) {
-      if (field === "") return definition.fields;
-      const path = split(".", field);
-      return head(
-        reduce(
-          ([relOptions, breadcrumb], relPath) => {
-            const choicePath = append(relPath, breadcrumb);
-            const choice = this.choices[join(".", choicePath)];
-            // TODO: this branch is causing me a lot of confusion
-            // It makes the return structure insconsistent and therefore hard
-            // to use in other places
-            const options = ifElse(
-              compose(equals("Undefined"), type),
-              always(relOptions[relPath]),
-              always(relOptions[relPath].options[choice])
-            )(choice);
-            return pair(options, choicePath);
-          },
-          pair(definition.fields, []),
-          path
+      const breadcrumb = split(".", field);
+      const choices = reject(isNil, init(breadcrumb));
+      const builtPath = append(
+        last(breadcrumb),
+        chain(
+          option => [option, "options", this.choices[option], "fields"],
+          choices
         )
       );
+      return path(builtPath, definition.fields);
     }
 
     /**
@@ -220,10 +215,8 @@ export default function(definition) {
      * @return {string[]|symbol} - list of valid option choices
      */
     options(field) {
-      const choices = split(".", field);
-      const pathTo = join(".", init(choices));
-      const choice = last(choices);
-      const options = path([choice, "options"], this._choiceConfig(pathTo));
+      const options = prop("options", this._choiceConfig(field));
+
       return cond([
         [compose(equals("Symbol"), type), identity],
         [compose(equals("Object"), type), keys]

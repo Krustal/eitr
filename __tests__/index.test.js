@@ -14,15 +14,19 @@ const testDefinition = {
     class: {
       options: {
         fighter: {
-          ability: { options: { str: {}, con: {} } },
-          weapon: {
-            options: {
-              one_handed: {
-                size: {
-                  options: { small: {}, medium: {} }
-                }
-              },
-              two_handed: {}
+          fields: {
+            ability: { options: { str: {}, con: {} } },
+            weapon: {
+              options: {
+                one_handed: {
+                  fields: {
+                    size: {
+                      options: { small: {}, medium: {} }
+                    }
+                  }
+                },
+                two_handed: {}
+              }
             }
           }
         },
