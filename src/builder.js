@@ -1,5 +1,6 @@
 import {
   append,
+  prepend,
   filter,
   propEq,
   keys,
@@ -30,6 +31,9 @@ import {
   pair,
   head,
   ifElse,
+  reject,
+  isNil,
+  tail,
   __
 } from "ramda";
 
@@ -127,19 +131,25 @@ export default function(definition) {
     }
 
     fields() {
-      const root = keys(definition.fields);
-      return concat(
-        root,
-        flatten(
-          map(f => {
-            const nestedKey = i => `${f}.${i}`;
-            return map(
-              nestedKey,
-              keys(definition.fields[f].options[this.choices[f]])
-            );
-          }, root)
-        )
-      );
+      const ideaFn = (fields, breadcrumb = []) => {
+        const field = join(".", breadcrumb);
+        const children = keys(fields);
+        const response = [
+          field,
+          map(key => {
+            const options = fields[key].options;
+            const route = append(key, breadcrumb);
+            const choicePath = join(".", reject(isNil, route));
+            const optionsAreLiteral = equals("Symbol", type(options));
+            const hasChoice = this.choices[choicePath] === undefined;
+            if (optionsAreLiteral || hasChoice) return choicePath;
+            return ideaFn(options[this.choices[choicePath]], route);
+          }, children)
+        ];
+        return flatten(response);
+      };
+      // remove the empty string field that is generated for the root
+      return tail(ideaFn(definition.fields));
     }
 
     requires() {
@@ -186,6 +196,9 @@ export default function(definition) {
           ([relOptions, breadcrumb], relPath) => {
             const choicePath = append(relPath, breadcrumb);
             const choice = this.choices[join(".", choicePath)];
+            // TODO: this branch is causing me a lot of confusion
+            // It makes the return structure insconsistent and therefore hard
+            // to use in other places
             const options = ifElse(
               compose(equals("Undefined"), type),
               always(relOptions[relPath]),

@@ -90,7 +90,7 @@ describe("creating a builder", () => {
         expect.arrayContaining(["name", "level"])
       );
     });
-    xit("can list all fields, even ones added by a choice", () => {
+    it("can list all fields, even ones added by a choice", () => {
       const character = testCharBuilder()
         .choose("class", "fighter")
         .choose("class.weapon", "one_handed");
@@ -98,10 +98,10 @@ describe("creating a builder", () => {
         "name",
         "class.ability",
         "class.weapon",
-        "class.weapon.handed"
+        "class.weapon.size"
       ]);
-      console.log(character.options("class.weapon"));
       expect(character.fields()).toEqual(expecting);
+      expect(character.fields()).not.toContain("");
     });
   });
   it("can list required fields", () => {
