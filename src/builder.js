@@ -68,6 +68,7 @@ export class InvalidChoice extends Error {
 
 export default function(definition) {
   // choices that have custom side effects
+  // TODO: should be able to factor these out eventually
   const nonLiteral = f => not(contains(f.options, values(OptionLiterals)));
   const nonLiteralDefChoices = keys(filter(nonLiteral, definition.fields));
   return class GeneratedBuilder {
@@ -164,6 +165,15 @@ export default function(definition) {
     missing() {
       let result = [];
       const undefinedChoice = field => this.choices[field] === undefined;
+      const literalChoice = f => contains(f.options, values(OptionLiterals));
+      const missingChoice = fields => filter(undefinedChoice, fields);
+      const foundMissing = chain(path => {
+        const { fields } = this._choiceConfig(path);
+        const isMissing = filter(undefinedChoice, fields);
+        const nonLiteralChoices = keys(reject(literalChoice, fields));
+      });
+      console.log("response", foundMissing(""));
+
       // fields missing values
       const rootMissing = filter(undefinedChoice, keys(definition.fields));
       // non-literal fields with values
