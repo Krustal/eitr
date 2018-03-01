@@ -184,7 +184,7 @@ describe("creating a builder", () => {
         .choose("class", "fighter")
         .choose("class.weapon", "one_handed");
       expect(character.missing()).toEqual(
-        expect.arrayContaining(["class.weapon.handed"])
+        expect.arrayContaining(["class.weapon.size"])
       );
     });
   });

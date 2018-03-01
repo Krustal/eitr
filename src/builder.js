@@ -36,8 +36,10 @@ import {
   tail,
   chain,
   prop,
+  isEmpty,
+  complement,
   __
-} from "ramda";
+} from 'ramda';
 
 export class InvalidField extends Error {
   constructor(field, ...params) {
@@ -66,7 +68,7 @@ export class InvalidChoice extends Error {
   }
 }
 
-export default function(definition) {
+export default function (definition) {
   // choices that have custom side effects
   // TODO: should be able to factor these out eventually
   const nonLiteral = f => not(contains(f.options, values(OptionLiterals)));
@@ -87,34 +89,34 @@ export default function(definition) {
         const choiceConfig = this._choiceConfig(field);
         const validOptions = choiceConfig.options;
         switch (typeof validOptions) {
-          case "symbol": {
+          case 'symbol': {
             const notMatchType = compose(not, equals(__, typeof values[field]));
             switch (validOptions) {
               case OptionLiterals.STRING:
-                if (notMatchType("string"))
-                  throw new InvalidChoice(
+                if (notMatchType('string'))
+                  {throw new InvalidChoice(
                     field,
                     values[field],
                     "must be string"
-                  );
+                  );}
                 break;
               case OptionLiterals.NUMBER:
-                if (notMatchType("number"))
-                  throw new InvalidChoice(
+                if (notMatchType('number'))
+                  {throw new InvalidChoice(
                     field,
                     values[field],
                     "must be number"
-                  );
+                  );}
                 break;
             }
             break;
           }
-          case "object": {
+          case 'object': {
             if (not(contains(values[field], keys(validOptions)))) {
               throw new InvalidChoice(
                 field,
                 values[field],
-                `must be one of [${join(", ", keys(validOptions))}]`
+                `must be one of [${join(', ', keys(validOptions))}]`
               );
             }
           }
@@ -124,7 +126,7 @@ export default function(definition) {
         // if we don't have a validation rule, then it is always valid
         const validationRule = choiceConfig.validation || always(true);
         if (not(validationRule(values[field])))
-          throw new InvalidChoice(field, values[field]);
+          {throw new InvalidChoice(field, values[field]);}
         set.call(this, field, values[field]);
       });
     }
@@ -135,21 +137,20 @@ export default function(definition) {
 
     fields() {
       const ideaFn = (config, breadcrumb = []) => {
-        console.log("ideaFn called with", config);
         const fields = config.fields;
-        const field = join(".", breadcrumb);
+        const field = join('.', breadcrumb);
         const children = keys(fields);
         const response = [
           field,
           map(key => {
             const options = fields[key].options;
             const route = append(key, breadcrumb);
-            const choicePath = join(".", reject(isNil, route));
-            const optionsAreLiteral = equals("Symbol", type(options));
+            const choicePath = join('.', reject(isNil, route));
+            const optionsAreLiteral = equals('Symbol', type(options));
             const hasChoice = this.choices[choicePath] === undefined;
             if (optionsAreLiteral || hasChoice) return choicePath;
             return ideaFn(options[this.choices[choicePath]], route);
-          }, children)
+          }, children),
         ];
         return flatten(response);
       };
@@ -158,36 +159,24 @@ export default function(definition) {
     }
 
     requires() {
-      return keys(filter(propEq("required", true), definition.fields));
+      return keys(filter(propEq('required', true), definition.fields));
     }
 
     // TODO: this should be cleaned up
     missing() {
-      let result = [];
+      const result = [];
       const undefinedChoice = field => this.choices[field] === undefined;
       const literalChoice = f => contains(f.options, values(OptionLiterals));
       const missingChoice = fields => filter(undefinedChoice, fields);
-      const foundMissing = chain(path => {
-        const { fields } = this._choiceConfig(path);
-        const isMissing = filter(undefinedChoice, fields);
-        const nonLiteralChoices = keys(reject(literalChoice, fields));
+      const foundMissing = chain(choicePath => {
+        const addBreadcrumb = f => (isEmpty(choicePath) ? f : `${choicePath}.${f}`);
+        const config = this._choiceConfig(choicePath);
+        const fields = this.choices[choicePath] ? config.options[this.choices[choicePath]].fields : config;
+        const isMissing = filter(undefinedChoice, map(addBreadcrumb, keys(fields)));
+        const nonLiteralChoices = filter(complement(undefinedChoice), map(addBreadcrumb, keys(reject(literalChoice, fields))));
+        return concat(isMissing, foundMissing(nonLiteralChoices));
       });
-      console.log("response", foundMissing(""));
-
-      // fields missing values
-      const rootMissing = filter(undefinedChoice, keys(definition.fields));
-      // non-literal fields with values
-      const nextLevel = difference(nonLiteralDefChoices, rootMissing);
-      const nestedMissing = flatten(
-        map(f => {
-          const innerFields =
-            definition.fields[f].options[this.choices[f]].fields;
-          const nestedKey = i => `${f}.${i}`;
-          const innerKeys = map(nestedKey, keys(innerFields));
-          return filter(undefinedChoice, innerKeys);
-        }, nextLevel)
-      );
-      return concat(rootMissing, nestedMissing);
+      return foundMissing(['']);
     }
 
     /**
@@ -205,16 +194,16 @@ export default function(definition) {
      * @returns {object} - object configuring field following field path
      */
     _choiceConfig(field) {
-      const breadcrumb = split(".", field);
+      const breadcrumb = split('.', field);
       const choices = reject(isNil, init(breadcrumb));
       const builtPath = append(
         last(breadcrumb),
         chain(
-          option => [option, "options", this.choices[option], "fields"],
+          option => [option, 'options', this.choices[option], 'fields'],
           choices
         )
       );
-      return path(builtPath, definition.fields);
+      return path(reject(isEmpty, builtPath), definition.fields);
     }
 
     /**
@@ -225,18 +214,16 @@ export default function(definition) {
      * @return {string[]|symbol} - list of valid option choices
      */
     options(field) {
-      const options = prop("options", this._choiceConfig(field));
+      const options = prop('options', this._choiceConfig(field));
 
       return cond([
-        [compose(equals("Symbol"), type), identity],
-        [compose(equals("Object"), type), keys]
+        [compose(equals('Symbol'), type), identity],
+        [compose(equals('Object'), type), keys],
       ])(options);
     }
 
     choose(field, value) {
-      return new GeneratedBuilder.prototype.constructor(
-        merge(this.choices, { [field]: value })
-      );
+      return new GeneratedBuilder.prototype.constructor(merge(this.choices, { [field]: value }));
     }
 
     get(field) {
@@ -245,9 +232,9 @@ export default function(definition) {
   };
 }
 
-const STRING = Symbol("STRING");
-const NUMBER = Symbol("NUMBER");
+const STRING = Symbol('STRING');
+const NUMBER = Symbol('NUMBER');
 export const OptionLiterals = {
-  STRING: STRING,
-  NUMBER: NUMBER
+  STRING,
+  NUMBER,
 };
