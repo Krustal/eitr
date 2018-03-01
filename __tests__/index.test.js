@@ -179,12 +179,12 @@ describe("creating a builder", () => {
         expect.arrayContaining(["class.ability"])
       );
     });
-    xit("can add new choices that nest", () => {
+    it("can add new choices that nest", () => {
       const character = testCharBuilder()
         .choose("class", "fighter")
         .choose("class.weapon", "one_handed");
       expect(character.missing()).toEqual(
-        expect.arrayContaining(["class.weapon.handed"])
+        expect.arrayContaining(["class.weapon.size"])
       );
     });
   });
