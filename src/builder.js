@@ -162,21 +162,26 @@ export default function (definition) {
       return keys(filter(propEq('required', true), definition.fields));
     }
 
-    // TODO: this should be cleaned up
     missing() {
       const result = [];
       const undefinedChoice = field => this.choices[field] === undefined;
       const literalChoice = f => contains(f.options, values(OptionLiterals));
-      const missingChoice = fields => filter(undefinedChoice, fields);
-      const foundMissing = chain(choicePath => {
-        const addBreadcrumb = f => (isEmpty(choicePath) ? f : `${choicePath}.${f}`);
+      const findMissingFor = chain(choicePath => {
+        const choice = this.choices[choicePath];
+        const choiceFields = path(['options', choice, 'fields']);
         const config = this._choiceConfig(choicePath);
-        const fields = this.choices[choicePath] ? config.options[this.choices[choicePath]].fields : config;
-        const isMissing = filter(undefinedChoice, map(addBreadcrumb, keys(fields)));
-        const nonLiteralChoices = filter(complement(undefinedChoice), map(addBreadcrumb, keys(reject(literalChoice, fields))));
-        return concat(isMissing, foundMissing(nonLiteralChoices));
+        const fields = isNil(choice) ? config : choiceFields(config);
+        // TODO: still bugs me that I need these branches
+        const addBreadcrumb = field => ifElse(isEmpty, always(field), concat(__, `.${field}`))(choicePath);
+        const fullChoicePaths = map(addBreadcrumb);
+        // choices at this level that are unmade
+        const missingChoices = filter(undefinedChoice, fullChoicePaths(keys(fields)));
+        // made choices that need further exploration
+        const nonLiteralChoices = keys(reject(literalChoice, fields));
+        const madeChoices = filter(complement(undefinedChoice), fullChoicePaths(nonLiteralChoices));
+        return concat(missingChoices, findMissingFor(madeChoices));
       });
-      return foundMissing(['']);
+      return findMissingFor(['']);
     }
 
     /**
