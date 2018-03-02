@@ -1,0 +1,64 @@
+{
+  "extends": "airbnb",
+  "plugins": [],
+  "env": {
+    "browser": true,
+    "mocha": true,
+    "node": true,
+    "es6": true
+  },
+  "globals": {
+    "jest": false,
+    "expect": false,
+    "beforeAll": false,
+    "afterAll": false
+  },
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true,
+      "experimentalObjectRestSpread": true
+    }
+  },
+  "rules": {
+    "arrow-parens": 0,
+    "arrow-body-style": ["error", "as-needed"],
+    "camelcase": 0,
+    "max-len": 0,
+    "no-console": [
+      "error",
+      {
+        "allow": ["info", "warn", "error"]
+      }
+    ],
+    "no-unused-vars": [
+      "error",
+      {
+        "varsIgnorePattern": "^_",
+        "argsIgnorePattern": "^_",
+        "caughtErrors": "none"
+      }
+    ],
+    "no-underscore-dangle": ["error", { "allowAfterThis": true }],
+    "comma-dangle": ["error", "always-multiline"],
+    "import/no-extraneous-dependencies": [
+      "error",
+      {
+        "devDependencies": [
+          "**/*_test.js",
+          "**/*_spec.js",
+          "**/test/**",
+          "**/*_story.js",
+          "**/*_story.jsx",
+          "**/server.js",
+          "**/prod_server.js",
+          "**/components/development/*.jsx"
+        ]
+      }
+    ],
+    "react/require-default-props": 0,
+    "function-paren-newline": 0,
+    "space-before-function-paren": 0
+  }
+}

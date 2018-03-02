@@ -1,11 +1,8 @@
 import {
   append,
-  prepend,
   filter,
   propEq,
   keys,
-  pick,
-  dropLast,
   contains,
   not,
   equals,
@@ -14,22 +11,17 @@ import {
   join,
   merge,
   values,
-  difference,
-  forEach,
   concat,
   map,
   flatten,
   path,
   split,
   last,
-  intersperse,
   reduce,
   cond,
   type,
   identity,
   init,
-  pair,
-  head,
   ifElse,
   reject,
   isNil,
@@ -38,7 +30,7 @@ import {
   prop,
   isEmpty,
   complement,
-  __
+  __,
 } from 'ramda';
 
 export class InvalidField extends Error {
@@ -57,7 +49,7 @@ export class InvalidField extends Error {
 }
 
 export class InvalidChoice extends Error {
-  constructor(field, value, reason, ...params) {
+  constructor(field, value, reason, ..._params) {
     super(`Attempted to choose [${value}] for [${field}], ${reason}`);
 
     if (Error.captureStackTrace) Error.captureStackTrace(this, InvalidChoice);
@@ -68,66 +60,36 @@ export class InvalidChoice extends Error {
   }
 }
 
-export default function (definition) {
-  // choices that have custom side effects
-  // TODO: should be able to factor these out eventually
-  const nonLiteral = f => not(contains(f.options, values(OptionLiterals)));
-  const nonLiteralDefChoices = keys(filter(nonLiteral, definition.fields));
+const STRING = Symbol('STRING');
+const NUMBER = Symbol('NUMBER');
+export const OptionLiterals = {
+  STRING,
+  NUMBER,
+};
+
+export default function(definition) {
   return class GeneratedBuilder {
-    constructor(values) {
+    constructor(setupValues) {
       this.choices = {};
-
-      function set(field, value) {
+      this.mods = {};
+      const set = (field, value) => {
         this.choices[field] = value;
-      }
-
-      const validFields = keys(definition.fields);
-
-      Object.keys(values).forEach(field => {
-        const nonLiteralChoices = nonLiteralDefChoices;
-        if (not(contains(field, this.fields()))) throw new InvalidField(field);
-        const choiceConfig = this._choiceConfig(field);
-        const validOptions = choiceConfig.options;
-        switch (typeof validOptions) {
-          case 'symbol': {
-            const notMatchType = compose(not, equals(__, typeof values[field]));
-            switch (validOptions) {
-              case OptionLiterals.STRING:
-                if (notMatchType('string'))
-                  {throw new InvalidChoice(
-                    field,
-                    values[field],
-                    "must be string"
-                  );}
-                break;
-              case OptionLiterals.NUMBER:
-                if (notMatchType('number'))
-                  {throw new InvalidChoice(
-                    field,
-                    values[field],
-                    "must be number"
-                  );}
-                break;
+        const mods = (this._choiceConfig(field).options[value] || {}).modifiers;
+        if (mods) {
+          keys(mods).forEach(moddedField => {
+            if (!this.mods[moddedField]) this.mods[moddedField] = {};
+            if (!this.mods[moddedField][mods[moddedField].category]) {
+              this.mods[moddedField][mods[moddedField].category] = [];
             }
-            break;
-          }
-          case 'object': {
-            if (not(contains(values[field], keys(validOptions)))) {
-              throw new InvalidChoice(
-                field,
-                values[field],
-                `must be one of [${join(', ', keys(validOptions))}]`
-              );
-            }
-          }
-          default:
-            break;
+            this.mods[moddedField][mods[moddedField].category].push(
+              mods[moddedField].fn
+            );
+          });
         }
-        // if we don't have a validation rule, then it is always valid
-        const validationRule = choiceConfig.validation || always(true);
-        if (not(validationRule(values[field])))
-          {throw new InvalidChoice(field, values[field]);}
-        set.call(this, field, values[field]);
+      };
+      keys(setupValues).forEach(field => {
+        this.validateOption(field, setupValues);
+        set.call(this, field, setupValues[field]);
       });
     }
 
@@ -135,15 +97,69 @@ export default function (definition) {
       return new this.prototype.constructor(config);
     }
 
+    validateOption(field, setupValues) {
+      if (not(contains(field, this.fields()))) throw new InvalidField(field);
+      const choiceConfig = this._choiceConfig(field);
+      const validOptions = choiceConfig.options;
+      switch (typeof validOptions) {
+        case 'symbol': {
+          const notMatchType = compose(
+            not,
+            equals(__, typeof setupValues[field])
+          );
+          switch (validOptions) {
+            case OptionLiterals.STRING:
+              if (notMatchType('string')) {
+                throw new InvalidChoice(
+                  field,
+                  setupValues[field],
+                  'must be string'
+                );
+              }
+              break;
+            case OptionLiterals.NUMBER:
+              if (notMatchType('number')) {
+                throw new InvalidChoice(
+                  field,
+                  setupValues[field],
+                  'must be number'
+                );
+              }
+              break;
+            default:
+              break;
+          }
+          break;
+        }
+        case 'object': {
+          if (not(contains(setupValues[field], keys(validOptions)))) {
+            throw new InvalidChoice(
+              field,
+              setupValues[field],
+              `must be one of [${join(', ', keys(validOptions))}]`
+            );
+          }
+          break;
+        }
+        default:
+          break;
+      }
+      // if we don't have a validation rule, then it is always valid
+      const validationRule = choiceConfig.validation || always(true);
+      if (not(validationRule(setupValues[field]))) {
+        throw new InvalidChoice(field, setupValues[field]);
+      }
+    }
+
     fields() {
       const ideaFn = (config, breadcrumb = []) => {
-        const fields = config.fields;
+        const { fields } = config;
         const field = join('.', breadcrumb);
         const children = keys(fields);
         const response = [
           field,
           map(key => {
-            const options = fields[key].options;
+            const { options } = fields[key];
             const route = append(key, breadcrumb);
             const choicePath = join('.', reject(isNil, route));
             const optionsAreLiteral = equals('Symbol', type(options));
@@ -158,12 +174,13 @@ export default function (definition) {
       return tail(ideaFn(definition));
     }
 
+    // TODO: requires should not return fields that have been filled
+    // eslint-disable-next-line class-methods-use-this
     requires() {
       return keys(filter(propEq('required', true), definition.fields));
     }
 
     missing() {
-      const result = [];
       const undefinedChoice = field => this.choices[field] === undefined;
       const literalChoice = f => contains(f.options, values(OptionLiterals));
       const findMissingFor = chain(choicePath => {
@@ -172,13 +189,20 @@ export default function (definition) {
         const config = this._choiceConfig(choicePath);
         const fields = isNil(choice) ? config : choiceFields(config);
         // TODO: still bugs me that I need these branches
-        const addBreadcrumb = field => ifElse(isEmpty, always(field), concat(__, `.${field}`))(choicePath);
+        const addBreadcrumb = field =>
+          ifElse(isEmpty, always(field), concat(__, `.${field}`))(choicePath);
         const fullChoicePaths = map(addBreadcrumb);
         // choices at this level that are unmade
-        const missingChoices = filter(undefinedChoice, fullChoicePaths(keys(fields)));
+        const missingChoices = filter(
+          undefinedChoice,
+          fullChoicePaths(keys(fields))
+        );
         // made choices that need further exploration
         const nonLiteralChoices = keys(reject(literalChoice, fields));
-        const madeChoices = filter(complement(undefinedChoice), fullChoicePaths(nonLiteralChoices));
+        const madeChoices = filter(
+          complement(undefinedChoice),
+          fullChoicePaths(nonLiteralChoices)
+        );
         return concat(missingChoices, findMissingFor(madeChoices));
       });
       return findMissingFor(['']);
@@ -227,19 +251,25 @@ export default function (definition) {
       ])(options);
     }
 
+    modifiers(field) {
+      return this.mods[field];
+    }
+
     choose(field, value) {
-      return new GeneratedBuilder.prototype.constructor(merge(this.choices, { [field]: value }));
+      return new GeneratedBuilder.prototype.constructor(
+        merge(this.choices, { [field]: value })
+      );
     }
 
     get(field) {
-      return this.choices[field];
+      const priority = ['*', '+']; // TODO: should be configurable eventually
+      const mods = this.modifiers(field) || {};
+      const result = reduce(
+        (acc, elem) => reduce((iAcc, mod) => mod(iAcc), acc, mods[elem] || []),
+        this.choices[field],
+        priority
+      );
+      return result;
     }
   };
 }
-
-const STRING = Symbol('STRING');
-const NUMBER = Symbol('NUMBER');
-export const OptionLiterals = {
-  STRING,
-  NUMBER,
-};

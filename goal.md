@@ -4,9 +4,9 @@ character "13th Age"
     name* # a generic field, required
     hometown # a generic field, not required
     level* (int,1,10) # a numeric field restricted to values >= 0 or <= 10
-    race?* (Race) # a custom field (choice) based on the options of "Race"
-    class?* (Class)
-    class2?[!class] (Class) # a custom field (choice) of Options Class, cannot duplicate `class`
+    race* (Race) # a custom field (choice) based on the options of "Race"
+    class* (Class)
+    class2[!class] (Class) # a custom field (choice) of Options Class, cannot duplicate `class`
 
     # a namespaced group of fields (useful when referring to values, avoiding namespace collisions, or defining broad rules)
     attributes
@@ -27,21 +27,21 @@ character "13th Age"
     Options Class
         fighter
             # option with restriction, cannot equal race choices attribute bonus
-            attributeBonus?[!race.attributeBonus]
+            attributeBonus[!race.attributeBonus]
                 # inline choices
-                str: attributes.str + 2 # "+" modifier, add 2 to attribute strength
+                str: + 2 attributes.str # "+" modifier, add 2 to attribute strength
                 con # options can either follow a `:` on a single line or cover multiple lines with indent
-                    attributes.con + 2
+                    + 2 attributes.con
         barbarian
-            attributeBonus?
-                str: attributes.str + 2
-                dex: attributes.dex + 2
+            attributeBonus
+                str: + 2 attributes.str
+                dex: + 2 attributes.dex
 
     Options Race
         human
-            attributeBonus?[!class.attributeBonus]
-                str: attributes.str + 2
-                dex: attributes.dex + 2
+            attributeBonus[!class.attributeBonus]
+                str: + 2 attributes.str
+                dex: + 2 attributes.dex
 ```
 
 Outputs a immutable constructor for the character builder rules.
