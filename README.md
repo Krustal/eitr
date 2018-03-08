@@ -1,8 +1,8 @@
-# Persona
+# Eitr
 
 A library for designing Roleplaying Game character build rules.
 
-[![CircleCI](https://circleci.com/gh/Krustal/persona.svg?style=svg)](https://circleci.com/gh/Krustal/persona)
+[![CircleCI](https://circleci.com/gh/Krustal/eitr.svg?style=svg)](https://circleci.com/gh/Krustal/eitr)
 
 ## Description
 
