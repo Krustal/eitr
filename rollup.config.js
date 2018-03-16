@@ -8,6 +8,8 @@ function plugins() {
   ];
 }
 
+console.log(process.env.BABEL_ENV, process.env.NODE_ENV);
+
 export default [
   {
     input: 'src/builder.js',
