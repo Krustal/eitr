@@ -1,9 +1,24 @@
 {
-    "presets": ["env"],
-    "plugins": [
+  "env": {
+    "test": {
+      "presets": "env",
+      "plugins": [
+        ["babel-plugin-transform-builtin-extend", { "globals": ["Error"] }]
+      ]
+    },
+    "production": {
+      "presets": [
         [
-            "babel-plugin-transform-builtin-extend", 
-            { "globals": ["Error"] }
+          "env",
+          {
+            "modules": false
+          }
         ]
-    ]
+      ],
+      "plugins": [
+        ["babel-plugin-transform-builtin-extend", { "globals": ["Error"] }],
+        "external-helpers"
+      ]
+    }
+  }
 }

@@ -1,8 +1,5 @@
-import Builder, {
-  OptionLiterals,
-  InvalidField,
-  InvalidChoice,
-} from '../src/builder';
+import { Builder, OptionLiterals } from '../src/builder';
+import { InvalidField, InvalidChoice } from '../src/builder';
 
 // example of a class configuration (post-compile)
 const testDefinition = {
