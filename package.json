@@ -1,6 +1,6 @@
 {
   "name": "eitr",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "lib/index.js",
   "module": "es/index.js",
   "author": "Byron McMullen <byronsm@gmail.com>",
@@ -26,8 +26,6 @@
     "rollup-plugin-babel": "^3.0.3"
   },
   "jest": {
-    "modulePaths": [
-      "<rootDir>/src"
-    ]
+    "modulePaths": ["<rootDir>/src"]
   }
 }
